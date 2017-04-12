@@ -1,10 +1,14 @@
 import cv2
 import numpy as np
 import arcpy
+from arcpy.sa import *
 from Tkinter import *
 import tkFileDialog
+import os
 
 class App:
+
+
     def __init__(self, master):
         global frame
         frame = Frame(master)
@@ -31,8 +35,15 @@ class App:
 
 
         # Run button
+
+
         self.runBtn = Button(frame, text = "RUN MULTISPECTRAL STACKING", fg="red", width = 30, relief=RAISED, command=self.mergeImages).grid(row=6,
                                                                             column=0, padx=10, pady=10, columnspan=2)
+
+        # Classify images
+        self.classifyIsoBtn = Button(frame, text="Run Isodata Classification", fg="blue", width=30, relief=RAISED,
+                                     command=self.runIsoClassify).grid(
+            row=8, column=0, columnspan=2, pady=5)
 
 
 
@@ -73,8 +84,20 @@ class App:
 
         if len(fileListNorms) == len(fileListRGB):
             for RGBitem, NormItem in zip(fileListRGB, fileListNorms):
-                fname = 'test.tif'
-                arcpy.CompositeBands_management([RGBitem, NormItem], fname)
+                fnamex = RGBitem.split('/')[-1].split('.')[0]+'_stacked.tif'
+                arcpy.CompositeBands_management([RGBitem, NormItem], fnamex)
+
+    def runIsoClassify(self):
+        global wrkspace
+        arcpy.env.workspace = wrkspace
+        normalsList =  arcpy.ListRasters("*", "TIF")
+        outDir = tkFileDialog.askdirectory(parent=root, title='Choose folder for output rasters.')
+        print normalsList
+        for raster in normalsList:
+            outUnsupervised = IsoClusterUnsupervisedClassification (raster, 3)
+            rasterOut = raster.split('.')[0]+"_classified.tif"
+            outUnsupervised.save(os.path.join(outDir, rasterOut))
+
 
 frame = None
 fileListRGB = []
